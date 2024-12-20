@@ -1,0 +1,41 @@
+# air.toml
+
+# General settings
+root = "."  # Root of your project, the directory where Air will watch for changes
+tmp_dir = "tmp"  # Directory for temporary files like compiled binaries
+log_file = "air.log"  # File where logs will be written
+
+# Build settings
+[build]
+  cmd = "GOFLAGS=-buildvcs=false go build -o ./tmp/main main.go"
+  bin = "./tmp/main"  # Name of the binary that Air will compile (can be any name)
+  dir = "."  # Directory to watch for changes
+  ignore = ["tmp", "vendor"]  # Directories to ignore for changes
+
+# Watch settings
+[watch]
+  # These are the file types that will trigger a rebuild when changed
+  extensions = ["go", "tpl", "tmpl", "html", "css", "js", "json", "yaml"]
+  
+  # Directories to watch for changes (add more directories if necessary)
+  dirs = ["."]
+  
+  # Add directories you want to ignore, like logs or compiled binaries
+  ignore_dirs = ["tmp", "vendor", ".git"]
+
+# Color settings for output logs
+[log]
+  color = true  # Enable colorized logs
+
+# Run settings
+[run]
+  # The delay before restarting after a file change, in seconds (default is 0.5)
+  delay = "0.5s"
+  
+  # Whether to automatically clear the terminal screen before restarting
+  clear = true
+
+# Extra settings
+[extra]
+  # Command to run after build (if you want to do post-processing, like migrations)
+  after = "echo 'App is running...'"
