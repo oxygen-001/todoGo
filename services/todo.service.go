@@ -2,71 +2,70 @@
 package services
 
 import (
-	"database/sql"
+	"context"
 	"encoding/json"
 	"net/http"
 	"todo-module/models"
+	"todo-module/repositories"
 )
 
-// WriteTodo Function to write new todo into database
-func WriteTodo(r *http.Request, db *sql.DB) (string, error) {
+type TodoServiceInterface interface {
+	CreateTodo(r *http.Request, ctx context.Context) (string, error)
+	GetAll(ctx context.Context) (string, error)
+	GetOne(ctx context.Context, id int) (models.Todo, error)
+	UpdateTodo(ctx context.Context, id int, todo models.Todo) error
+	DeleteTodo(ctx context.Context, id int) error
+}
 
+type TodoService struct {
+	repo repositories.TodoRepositoryInterface
+}
+
+func NewTodoService(repo repositories.TodoRepositoryInterface) TodoServiceInterface {
+	return &TodoService{repo: repo}
+}
+
+// WriteTodo Function to write new todo into database
+
+func (s *TodoService) CreateTodo(r *http.Request, ctx context.Context) (string, error) {
 	// Decode the JSON payload into a Todo struct
 	var todo models.Todo
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
 		return "Invalid JSON payload", err
 	}
 
-	// Query to insert new Todo
-	query := `INSERT INTO todos (title, done) VALUES ($1, $2) RETURNING id`
-
-	// Execute query
-	err := db.QueryRow(query, todo.Title, todo.Done).Scan(&todo.ID)
+	err := s.repo.CreateTodo(ctx, todo)
 	if err != nil {
-		return "Error while writing todo into db", err
+		return "Error: while inserting to db", err
 	}
 
 	return "OK", nil
 }
 
 // GetTodos function gets all todos from database
-func GetTodos(r *http.Request, db *sql.DB) (string, error) {
 
-	// Query to get all todos
-	query := `SELECT id, title, done, created_at FROM todos`
-
-	// Execute the query
-	rows, err := db.Query(query)
+func (s *TodoService) GetAll(ctx context.Context) (string, error) {
+	todos, err := s.repo.GetAll(ctx)
 	if err != nil {
-		return "Error while fetching todos from database", err
-	}
-	defer rows.Close() // Ensure rows are properly closed to avoid resource leaks
-
-	// Slice to hold todos
-	var todos []models.Todo
-
-	// Iterate through rows
-	for rows.Next() {
-		var todo models.Todo
-		if err := rows.Scan(&todo.ID, &todo.Title, &todo.Done, &todo.Created_at); err != nil {
-			return "Error while scanning todo rows", err
-		}
-
-		// Push todo to todos
-		todos = append(todos, todo)
+		return "Error: while getting todos", err
 	}
 
-	// Check if an error occurred during iteration
-	if err := rows.Err(); err != nil {
-		return "Error while iterating over rows", err
-	}
-
-	// Convert todos slice to JSON
 	todosJSON, err := json.Marshal(todos)
 	if err != nil {
-		return "Error while encoding todos to JSON", err
+		return "Error: while parsing to json", err
 	}
 
-	// string(todosJSON) converts the []byte to string for returning as function output
 	return string(todosJSON), nil
+}
+
+func (s *TodoService) GetOne(ctx context.Context, id int) (models.Todo, error) {
+	return s.repo.GetOne(ctx, id)
+}
+
+func (s *TodoService) UpdateTodo(ctx context.Context, id int, todo models.Todo) error {
+	return s.repo.UpdateTodo(ctx, id, todo)
+}
+
+func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
+	return s.repo.DeleteTodo(ctx, id)
 }

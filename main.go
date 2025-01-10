@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"todo-module/handlers"
 	"todo-module/pkg"
+	"todo-module/repositories"
+	"todo-module/services"
 )
 
 func main() {
@@ -18,20 +20,23 @@ func main() {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
 
+	// Initialize the repository
+	todoRepo := &repositories.TodoRepository{DB: db}
+
+	// Initialize the service
+	todoService := services.NewTodoService(todoRepo)
+
+	// Initialize the handler
+	todoHandler := handlers.NewTodoHander(todoService)
+
 	// Close database connection when the program exits
 	defer db.Close()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Welcome to-do app")
-	})
-
-	http.HandleFunc("POST /create", func(w http.ResponseWriter, r *http.Request) {
-		handlers.CreateTodoHandler(r, w, db)
-	})
-
-	http.HandleFunc("GET /todos", func(w http.ResponseWriter, r *http.Request) {
-		handlers.GetTodosHandler(r, w, db)
-	})
+	http.HandleFunc("GET /", todoHandler.GetTodos)
+	http.HandleFunc("GET /single", todoHandler.GetSingleTodo)
+	http.HandleFunc("POST /create", todoHandler.CreateTodoHandler)
+	http.HandleFunc("PUT /", todoHandler.UpdateTodo)
+	http.HandleFunc("DELETE /", todoHandler.DeleteTodo)
 
 	fmt.Println("Server is running on http://localhost:8080")
 
